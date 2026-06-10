@@ -201,33 +201,25 @@ public class Login extends javax.swing.JFrame {
     }//GEN-LAST:event_linkRegisterMouseClicked
 
     private void handleLogin() {
-        System.out.println("[Login.handleLogin()] Starting login process");
         String username = txtUsername.getText().trim();
         String password = new String(txtPassword.getPassword());
 
         if (username.isEmpty() || password.isEmpty()) {
-            System.out.println("[Login.handleLogin()] Username or password is empty");
             JOptionPane.showMessageDialog(this, "Please fill all fields", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
         
-        System.out.println("[Login.handleLogin()] Username: " + username);
         
         try {
-            System.out.println("[Login.handleLogin()] Calling authManager.login()");
             User user = authManager.login(username, password);
             
-            System.out.println("[Login.handleLogin()] Login successful for user: " + user.getUsername());
             String token = RestApiClient.getInstance().getAccessToken();
-            System.out.println("[Login.handleLogin()] Token: " + token);
             
             SessionManager.getInstance().login(user, token);
-            System.out.println("[Login.handleLogin()] Opening Chat window");
             new Chat().showFrame();
             dispose();
             
         } catch (Exception e) {
-            System.out.println("[Login.handleLogin()] Login failed: " + e.getMessage());
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, 
                 "Login failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

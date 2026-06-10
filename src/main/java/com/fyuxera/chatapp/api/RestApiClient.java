@@ -117,26 +117,19 @@ public class RestApiClient {
     // core execution
     
     private JsonObject executeRequest(HttpRequest request) throws Exception {
-        System.out.println("[RestApiClient.executeRequest()] Sending request to: " + request.uri());
         HttpResponse<String> response = httpClient.send(request,
                 HttpResponse.BodyHandlers.ofString());
-        
-        System.out.println("[RestApiClient.executeRequest()] Status: " + response.statusCode());
-        System.out.println("[RestApiClient.executeRequest()] Response body: " + response.body());
-        
+                
         return parseResponse(response.statusCode(), response.body());
     }
     
     private JsonObject parseResponse(int statusCode, String body) throws Exception {
-        System.out.println("[RestApiClient.parseResponse()] Parsing response with status " + statusCode);
         JsonObject response = new JsonObject();
         
         try {
             JsonObject parsed = JsonParser.parseString(body).getAsJsonObject();
             response = parsed;
-            System.out.println("[RestApiClient.parseResponse()] Successfully parsed JSON");
         } catch (Exception e) {
-            System.out.println("[RestApiClient.parseResponse()] Failed to parse JSON: " + e.getMessage());
             response.addProperty("status", "error");
             response.addProperty("message", "Invalid response format");
         }

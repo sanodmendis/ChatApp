@@ -11,9 +11,6 @@ public class ChatApp {
             e.printStackTrace();
         }
 
-        System.out.println("Initializing ChatApp...");
-        System.out.println("REST API configured. Opening Login screen...");
-
         java.awt.EventQueue.invokeLater(() -> {
             new Login().setVisible(true);
         });

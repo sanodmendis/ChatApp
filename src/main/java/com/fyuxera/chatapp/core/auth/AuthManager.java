@@ -49,7 +49,6 @@ public class AuthManager {
     
     // login user
     public User login(String username, String password) throws Exception {
-        System.out.println("[AuthManager.login()] Starting login for: " + username);
         
         if (username == null || username.trim().isEmpty() || 
             password == null || password.isEmpty()) {
@@ -60,45 +59,35 @@ public class AuthManager {
         json.addProperty("username", username);
         json.addProperty("password", password);
         
-        System.out.println("[AuthManager.login()] Sending login request to API");
         JsonObject response = apiClient.post(
                 ApiConfig.ENDPOINT_AUTH_LOGIN, 
                 json.toString()
         );
-        
-        System.out.println("[AuthManager.login()] Response received: " + (response != null ? "not null" : "NULL"));
-        
+                
         if (response == null) {
             throw new RuntimeException("No response from server");
         }
         
-        System.out.println("[AuthManager.login()] Checking if success: " + apiClient.isSuccess(response));
         if (!apiClient.isSuccess(response)) {
             String errorMsg = response.has("message") ? 
                 response.get("message").getAsString() : "Login failed";
-            System.out.println("[AuthManager.login()] Login failed: " + errorMsg);
             throw new RuntimeException(errorMsg);
         }
         
         // extract token
-        System.out.println("[AuthManager.login()] Extracting token...");
         if (!response.has("token")) {
             throw new RuntimeException("No token in response");
         }
         String token = response.get("token").getAsString();
-        System.out.println("[AuthManager.login()] Token extracted, setting access token");
         apiClient.setAccessToken(token);
         
         // extract user data
-        System.out.println("[AuthManager.login()] Extracting user data...");
         if (!response.has("user")) {
             throw new RuntimeException("No user data in response");
         }
         JsonObject userJson = response.getAsJsonObject("user");
-        System.out.println("[AuthManager.login()] Parsing user JSON");
         User user = jsonToUser(userJson);
         
-        System.out.println("[AuthManager.login()] Login successful for user: " + user.getUsername());
         return user;
     }
     

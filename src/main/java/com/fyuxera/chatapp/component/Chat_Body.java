@@ -54,10 +54,10 @@ public class Chat_Body extends javax.swing.JPanel {
         body.revalidate();
     }
 
-    public void addItemLeft(String text, String user) {
+    public void addItemLeft(String text, String user, String time) {
         Chat_Left_With_Profile item = new Chat_Left_With_Profile();
         item.setText(text);
-        item.setTime();
+        item.setTime(time);
         item.setUserProfile(user);
         body.add(item, "wrap, w 100::75%");
         body.repaint();

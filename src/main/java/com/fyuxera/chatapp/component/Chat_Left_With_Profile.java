@@ -17,6 +17,10 @@ public class Chat_Left_With_Profile extends javax.swing.JLayeredPane {
         }
     }
 
+    public void setTime(String time) {
+        txt.setTime(time);
+    }
+
     public void setTime() {
         txt.setTime("10:30 PM");
     }

@@ -529,7 +529,7 @@ public class Chat extends javax.swing.JFrame {
                             messageMap.put(messageId, right);
                             chatBody.addRightComponent(right);
                         } else {
-                            chatBody.addItemLeft(messageText, selectedContactName);
+                            chatBody.addItemLeft(messageText, selectedContactName, time);
                         }
                     }
                     jTextField1.requestFocus();

@@ -14,6 +14,7 @@ ChatApp delivers a lightweight messaging client built using Java Swing for the U
 - Edit Messages
 - Delete Messages
 - Personal contact management
+- Message read receipts
 
 - REST API-based communication
 - Simple and responsive Swing UI
@@ -23,7 +24,6 @@ ChatApp delivers a lightweight messaging client built using Java Swing for the U
 - Emoji support
 - File and media attachments
 - Online status indicators
-- Message read receipts
 - Improved UI/UX enhancements
 
 ## Tech Stack

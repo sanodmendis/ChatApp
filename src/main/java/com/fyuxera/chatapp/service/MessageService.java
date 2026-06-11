@@ -94,6 +94,18 @@ public class MessageService {
         return apiClient.isSuccess(response);
     }
     
+    // mark all messages from a sender as read
+    public boolean markMessagesAsRead(int senderId) throws Exception {
+        JsonObject json = new JsonObject();
+        json.addProperty("sender_id", senderId);
+
+        JsonObject response = apiClient.putAuth(
+                ApiConfig.ENDPOINT_MESSAGES_READ,
+                json.toString()
+        );
+        return apiClient.isSuccess(response);
+    }
+
     // get all conversations
     public JsonArray getConversations() throws Exception {
         JsonObject response = apiClient.getAuth(ApiConfig.ENDPOINT_CONVERSATIONS);

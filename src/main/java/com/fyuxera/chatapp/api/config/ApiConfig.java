@@ -29,6 +29,7 @@ public class ApiConfig {
     public static final String ENDPOINT_CONVERSATIONS = "/conversations";
     public static final String ENDPOINT_MESSAGES_DELETE = "/messages/";
     public static final String ENDPOINT_MESSAGES_UPDATE = "/messages/";
+    public static final String ENDPOINT_MESSAGES_READ = "/messages/read";
 
     // HTTP Timeouts (seconds)
     public static final int CONNECT_TIMEOUT = 5;

@@ -11,11 +11,14 @@ import com.fyuxera.chatapp.model.User;
 import com.fyuxera.chatapp.model.Message;
 import com.fyuxera.chatapp.core.session.SessionManager;
 import com.fyuxera.chatapp.api.RestApiClient;
+import com.fyuxera.chatapp.ui.IconLoader;
 import com.fyuxera.chatapp.ui.ScrollBar;
 import com.fyuxera.chatapp.ui.dialogs.AddContact;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Cursor;
@@ -31,6 +34,8 @@ import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -42,6 +47,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import javax.swing.ImageIcon;
 
@@ -57,6 +63,16 @@ public class Chat extends javax.swing.JFrame {
 
     private int editingMessageId = -1;
     private Chat_RightAdapter editingComponent;
+
+    // tracks sent message components by ID for status polling
+    private final Map<Integer, Chat_RightAdapter> messageMap = new ConcurrentHashMap<>();
+    private Timer statusPollTimer;
+
+    // safely read is_read from JSON (handles null/missing)
+    private boolean getIsRead(JsonObject msg) {
+        JsonElement el = msg.get("is_read");
+        return el != null && !el.isJsonNull() && el.getAsInt() == 1;
+    }
 
     public Chat() {
         initComponents();
@@ -412,7 +428,6 @@ public class Chat extends javax.swing.JFrame {
                     menuList.revalidate();
                 });
             } catch (Exception e) {
-                System.err.println("Error loading contacts: " + e.getMessage());
                 SwingUtilities.invokeLater(() -> {
                     menuList.removeAll();
                     JLabel errorLabel = new JLabel("  Error loading contacts. Check connection.");
@@ -430,6 +445,8 @@ public class Chat extends javax.swing.JFrame {
 
     private void selectContact(int userId, String name) {
         cancelEdit();
+        stopStatusPolling();
+        messageMap.clear();
         selectedContactId = userId;
         selectedContactName = name;
         jLabel7.setText(name);
@@ -448,6 +465,38 @@ public class Chat extends javax.swing.JFrame {
         }
     }
 
+    private void startStatusPolling() {
+        stopStatusPolling();
+        statusPollTimer = new Timer(5000, e -> {
+            if (selectedContactId == -1 || messageMap.isEmpty()) return;
+            int contactId = selectedContactId;
+            int myId = SessionManager.getInstance().getCurrentUser().getUserId();
+            new Thread(() -> {
+                try {
+                    JsonArray msgs = messageService.getConversation(myId, contactId);
+                    SwingUtilities.invokeLater(() -> {
+                        for (int i = 0; i < msgs.size(); i++) {
+                            JsonObject m = msgs.get(i).getAsJsonObject();
+                            int id = m.get("message_id").getAsInt();
+                            boolean read = getIsRead(m);
+                            Chat_RightAdapter a = messageMap.get(id);
+                            if (a != null) a.setRead(read);
+                        }
+                    });
+                } catch (Exception ex) {
+                    // Handle exception
+                }
+            }).start();
+        });
+        statusPollTimer.start();
+    }
+
+    private void stopStatusPolling() {
+        if (statusPollTimer != null && statusPollTimer.isRunning()) {
+            statusPollTimer.stop();
+        }
+    }
+
     private void loadConversation() {
         new Thread(() -> {
             try {
@@ -457,6 +506,7 @@ public class Chat extends javax.swing.JFrame {
 
                 SwingUtilities.invokeLater(() -> {
                     chatBody.clearChat();
+                    messageMap.clear();
                     String lastDate = "";
                     for (int i = 0; i < messages.size(); i++) {
                         JsonObject msgJson = messages.get(i).getAsJsonObject();
@@ -473,17 +523,31 @@ public class Chat extends javax.swing.JFrame {
                         String time = createdAt.substring(11, 16);
 
                         if (senderId == currentUser.getUserId()) {
-                            Chat_RightAdapter right = new Chat_RightAdapter(messageText, time);
+                            boolean isRead = getIsRead(msgJson);
+                            Chat_RightAdapter right = new Chat_RightAdapter(messageText, time, isRead);
                             right.setMessageId(messageId);
+                            messageMap.put(messageId, right);
                             chatBody.addRightComponent(right);
                         } else {
                             chatBody.addItemLeft(messageText, selectedContactName);
                         }
                     }
                     jTextField1.requestFocus();
+
+                    // mark received messages as read
+                    int otherId = selectedContactId;
+                    new Thread(() -> {
+                        try {
+                            messageService.markMessagesAsRead(otherId);
+                        } catch (Exception ex) {
+                            // silently fail - non-critical
+                        }
+                    }).start();
+
+                    startStatusPolling();
                 });
             } catch (Exception e) {
-                System.err.println("Error loading conversation: " + e.getMessage());
+                // Handle exception
             }
         }).start();
     }
@@ -520,8 +584,9 @@ public class Chat extends javax.swing.JFrame {
                 SwingUtilities.invokeLater(() -> {
                     if (msgId != -1) {
                         String time = timeFormat.format(new Date());
-                        Chat_RightAdapter right = new Chat_RightAdapter(message, time);
+                        Chat_RightAdapter right = new Chat_RightAdapter(message, time, false);
                         right.setMessageId(msgId);
+                        messageMap.put(msgId, right);
                         chatBody.addRightComponent(right);
                         jTextField1.requestFocus();
                     } else {
@@ -578,11 +643,12 @@ public class Chat extends javax.swing.JFrame {
     private class Chat_RightAdapter extends JPanel {
         private final JLabel textLabel;
         private final JLabel timeLabel;
+        private final JLabel statusIcon;
         private String rawText;
         private int messageId = -1;
         private JMenuItem editItem;
 
-        public Chat_RightAdapter(String text, String time) {
+        public Chat_RightAdapter(String text, String time, boolean isRead) {
             this.rawText = text;
             setLayout(new java.awt.BorderLayout());
             setBackground(new Color(179, 229, 255));
@@ -594,14 +660,40 @@ public class Chat extends javax.swing.JFrame {
             textLabel.setBorder(BorderFactory.createEmptyBorder(8, 12, 4, 12));
             setDisplayText(text);
 
+            // bottom row: time + status icon
+            JPanel bottomPanel = new JPanel(new BorderLayout());
+            bottomPanel.setOpaque(false);
+            bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 12, 6, 12));
+
             timeLabel = new JLabel(time);
             timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
             timeLabel.setForeground(new Color(110, 110, 110));
-            timeLabel.setBorder(BorderFactory.createEmptyBorder(0, 12, 6, 12));
+
+            statusIcon = new JLabel();
+            updateIcon(isRead);
+            statusIcon.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 0));
+
+            bottomPanel.add(timeLabel, BorderLayout.WEST);
+            bottomPanel.add(statusIcon, BorderLayout.EAST);
 
             add(textLabel, java.awt.BorderLayout.CENTER);
-            add(timeLabel, java.awt.BorderLayout.SOUTH);
+            add(bottomPanel, java.awt.BorderLayout.SOUTH);
             initContextMenu();
+        }
+
+        // update status icon (e.g. when message gets read)
+        public void setRead(boolean read) {
+            updateIcon(read);
+        }
+
+        private void updateIcon(boolean read) {
+            String name = read ? "double_tick.png" : "tick.png";
+            ImageIcon icon = IconLoader.loadIcon(name);
+            if (icon != null) {
+                statusIcon.setIcon(icon);
+            } else {
+                statusIcon.setText(read ? "R" : "S");
+            }
         }
 
         public void setMessageId(int id) {
@@ -653,6 +745,7 @@ public class Chat extends javax.swing.JFrame {
                                     parent.repaint();
                                     parent.revalidate();
                                 }
+                                messageMap.remove(delId);
                             });
                         } else {
                             SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(

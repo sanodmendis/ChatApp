@@ -18,6 +18,12 @@ public class ApiConfig {
     public static final String ENDPOINT_AUTH_LOGIN = "/auth/login";
     public static final String ENDPOINT_USERS_ME = "/users/me";
     public static final String ENDPOINT_USERS_SEARCH = "/users";
+    
+    // Contact endpoints
+    public static final String ENDPOINT_CONTACTS = "/contacts";
+    public static final String ENDPOINT_CONTACTS_SEARCH = "/contacts/search";
+    
+    // Message endpoints
     public static final String ENDPOINT_MESSAGES_SEND = "/messages";
     public static final String ENDPOINT_MESSAGES_CONVERSATION = "/messages/";
     public static final String ENDPOINT_CONVERSATIONS = "/conversations";

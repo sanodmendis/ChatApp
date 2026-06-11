@@ -5,12 +5,14 @@ import com.fyuxera.chatapp.component.Chat_Bottom;
 import com.fyuxera.chatapp.component.Chat_Title;
 import com.fyuxera.chatapp.component.Item_People;
 import com.fyuxera.chatapp.service.UserService;
+import com.fyuxera.chatapp.service.ContactService;
 import com.fyuxera.chatapp.service.MessageService;
 import com.fyuxera.chatapp.model.User;
 import com.fyuxera.chatapp.model.Message;
 import com.fyuxera.chatapp.core.session.SessionManager;
 import com.fyuxera.chatapp.api.RestApiClient;
 import com.fyuxera.chatapp.ui.ScrollBar;
+import com.fyuxera.chatapp.ui.dialogs.AddContact;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -46,6 +48,7 @@ import javax.swing.ImageIcon;
 public class Chat extends javax.swing.JFrame {
 
     private UserService userService;
+    private ContactService contactService;
     private MessageService messageService;
     private int selectedContactId = -1;
     private String selectedContactName = "";
@@ -61,6 +64,7 @@ public class Chat extends javax.swing.JFrame {
         this.setLocationRelativeTo(null);
         this.setExtendedState(this.MAXIMIZED_BOTH);
         userService = new UserService();
+        contactService = new ContactService();
         messageService = new MessageService();
         setupForm();
     }
@@ -94,9 +98,13 @@ public class Chat extends javax.swing.JFrame {
         jPanel2 = new javax.swing.JPanel();
         sp = new javax.swing.JScrollPane();
         menuList = new javax.swing.JPanel();
-        jPanel3 = new javax.swing.JPanel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
+        jPanel6 = new javax.swing.JPanel();
+        jLabel4 = new javax.swing.JLabel();
+        btnAddContact = new javax.swing.JButton();
+        jPanel9 = new javax.swing.JPanel();
+        jPanel7 = new javax.swing.JPanel();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel8 = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
         jPanel5 = new javax.swing.JPanel();
         jTextField1 = new javax.swing.JTextField();
@@ -108,7 +116,7 @@ public class Chat extends javax.swing.JFrame {
 
         jPanel1.setBackground(new java.awt.Color(229, 229, 229));
 
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jLabel1.setText("ChatApp");
 
         btnLogout.setText("Logout");
@@ -123,7 +131,7 @@ public class Chat extends javax.swing.JFrame {
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(10, 10, 10)
+                .addGap(16, 16, 16)
                 .addComponent(jLabel1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(btnLogout)
@@ -132,11 +140,11 @@ public class Chat extends javax.swing.JFrame {
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(btnLogout)
-                    .addComponent(jLabel1))
-                .addGap(7, 7, Short.MAX_VALUE))
+                .addGap(9, 9, 9)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(btnLogout))
+                .addContainerGap(9, Short.MAX_VALUE))
         );
 
         jPanel2.setBackground(new java.awt.Color(245, 246, 250));
@@ -159,47 +167,82 @@ public class Chat extends javax.swing.JFrame {
 
         sp.setViewportView(menuList);
 
+        jLabel4.setFont(new java.awt.Font("Segoe UI Semibold", 0, 13)); // NOI18N
+        jLabel4.setText("Friends");
+
+        btnAddContact.setText("Add");
+        btnAddContact.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddContactActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
+                .addGap(14, 14, 14)
+                .addComponent(jLabel4)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(btnAddContact)
+                .addContainerGap())
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnAddContact)
+                    .addComponent(jLabel4))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(sp)
+            .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(sp)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+                .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, 0)
+                .addComponent(sp))
         );
 
-        jPanel3.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel7.setBackground(new java.awt.Color(255, 255, 255));
 
-        jLabel2.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        jLabel2.setForeground(new java.awt.Color(30, 30, 30));
-        jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        jLabel2.setText("Select a contact");
+        jLabel7.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel7.setForeground(new java.awt.Color(30, 30, 30));
+        jLabel7.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jLabel7.setText("Select a contact");
 
-        jLabel3.setFont(new java.awt.Font("Segoe UI", 0, 11));
-        jLabel3.setForeground(new java.awt.Color(70, 160, 70));
-        jLabel3.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        jLabel3.setText("Choose a contact to start chatting");
+        jLabel8.setFont(new java.awt.Font("Segoe UI", 0, 11)); // NOI18N
+        jLabel8.setForeground(new java.awt.Color(70, 160, 70));
+        jLabel8.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jLabel8.setText("Choose a contact to start chatting");
 
-        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
-        jPanel3Layout.setHorizontalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel3Layout.createSequentialGroup()
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 570, Short.MAX_VALUE))
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
+                    .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, 577, Short.MAX_VALUE))
                 .addContainerGap())
         );
-        jPanel3Layout.setVerticalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel3Layout.createSequentialGroup()
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
                 .addGap(10, 10, 10)
-                .addComponent(jLabel2)
+                .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel3)
+                .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(10, 10, 10))
         );
 
@@ -213,13 +256,13 @@ public class Chat extends javax.swing.JFrame {
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 402, Short.MAX_VALUE)
+            .addGap(0, 305, Short.MAX_VALUE)
         );
 
         jPanel5.setBackground(new java.awt.Color(255, 255, 255));
 
         jTextField1.setBackground(new java.awt.Color(245, 246, 250));
-        jTextField1.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        jTextField1.setFont(new java.awt.Font("Segoe UI", 0, 13)); // NOI18N
         jTextField1.setForeground(new java.awt.Color(30, 30, 30));
         jTextField1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -227,7 +270,7 @@ public class Chat extends javax.swing.JFrame {
             }
         });
 
-        btnSend.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/send.png")));
+        btnSend.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/send.png"))); // NOI18N
         btnSend.setBorderPainted(false);
         btnSend.setContentAreaFilled(false);
         btnSend.setFocusPainted(false);
@@ -258,6 +301,27 @@ public class Chat extends javax.swing.JFrame {
                 .addGap(10, 10, 10))
         );
 
+        javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
+        jPanel9.setLayout(jPanel9Layout);
+        jPanel9Layout.setHorizontalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addGap(0, 0, 0)
+                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+        );
+        jPanel9Layout.setVerticalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel9Layout.createSequentialGroup()
+                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, 0)
+                .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(0, 0, 0)
+                .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -265,29 +329,19 @@ public class Chat extends javax.swing.JFrame {
             .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createSequentialGroup()
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addGap(0, 0, 0)
+                .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, 0)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, 0)
-                        .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGap(0, 0, 0)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
         );
     }// </editor-fold>//GEN-END:initComponents
-
-    private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendActionPerformed
-        sendMessage();
-    }//GEN-LAST:event_btnSendActionPerformed
 
     private void btnLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogoutActionPerformed
         int confirm = JOptionPane.showConfirmDialog(this,
@@ -302,46 +356,74 @@ public class Chat extends javax.swing.JFrame {
         java.awt.EventQueue.invokeLater(() -> new Login().setVisible(true));
     }//GEN-LAST:event_btnLogoutActionPerformed
 
+    private void btnAddContactActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddContactActionPerformed
+        new AddContact(this::loadContacts).setVisible(true);
+    }//GEN-LAST:event_btnAddContactActionPerformed
+
+    private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendActionPerformed
+        sendMessage();
+    }//GEN-LAST:event_btnSendActionPerformed
+
     // business logic
 
     private void loadContacts() {
         new Thread(() -> {
             try {
-                JsonArray allUsers = userService.getAllUsers();
+                // Use ContactService to get actual contacts
+                JsonArray contacts = contactService.getContacts();
                 User currentUser = SessionManager.getInstance().getCurrentUser();
 
                 SwingUtilities.invokeLater(() -> {
                     menuList.removeAll();
-                    if (allUsers != null) {
-                        for (int i = 0; i < allUsers.size(); i++) {
-                            JsonObject userJson = allUsers.get(i).getAsJsonObject();
-                            int userId = userJson.get("user_id").getAsInt();
-                            String fullName = userJson.get("full_name").getAsString();
-                            
-                            if (userId != currentUser.getUserId()) {
-                                Item_People item = new Item_People(fullName, false);
-                                item.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
-                                final int finalUserId = userId;
-                                item.addMouseListener(new MouseAdapter() {
-                                    @Override
-                                    public void mouseClicked(MouseEvent e) {
-                                        selectContact(finalUserId, fullName);
-                                    }
-                                });
-                                menuList.add(item);
-                                javax.swing.JSeparator sep = new javax.swing.JSeparator();
-                                sep.setForeground(new Color(220, 220, 220));
-                                sep.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 1));
-                                sep.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
-                                menuList.add(sep);
-                            }
+                    if (contacts != null && contacts.size() > 0) {
+                        for (int i = 0; i < contacts.size(); i++) {
+                            JsonObject contactJson = contacts.get(i).getAsJsonObject();
+                            int contactUserId = contactJson.get("contact_user_id").getAsInt();
+                            String fullName = contactJson.has("contact_full_name") 
+                                    ? contactJson.get("contact_full_name").getAsString() 
+                                    : contactJson.get("contact_username").getAsString();
+
+                            Item_People item = new Item_People(fullName, false);
+                            item.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+                            final int finalUserId = contactUserId;
+                            item.addMouseListener(new MouseAdapter() {
+                                @Override
+                                public void mouseClicked(MouseEvent e) {
+                                    selectContact(finalUserId, fullName);
+                                }
+                            });
+                            menuList.add(item);
+                            javax.swing.JSeparator sep = new javax.swing.JSeparator();
+                            sep.setForeground(new Color(220, 220, 220));
+                            sep.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 1));
+                            sep.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+                            menuList.add(sep);
                         }
+                    } else {
+                        // Show placeholder when no contacts exist
+                        JLabel emptyLabel = new JLabel("  No contacts yet. Click \"Add\" to add friends.");
+                        emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                        emptyLabel.setForeground(new Color(150, 150, 150));
+                        emptyLabel.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+                        emptyLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                        menuList.add(emptyLabel);
                     }
                     menuList.repaint();
                     menuList.revalidate();
                 });
             } catch (Exception e) {
                 System.err.println("Error loading contacts: " + e.getMessage());
+                SwingUtilities.invokeLater(() -> {
+                    menuList.removeAll();
+                    JLabel errorLabel = new JLabel("  Error loading contacts. Check connection.");
+                    errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    errorLabel.setForeground(new Color(200, 50, 50));
+                    errorLabel.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+                    errorLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                    menuList.add(errorLabel);
+                    menuList.repaint();
+                    menuList.revalidate();
+                });
             }
         }).start();
     }
@@ -350,9 +432,9 @@ public class Chat extends javax.swing.JFrame {
         cancelEdit();
         selectedContactId = userId;
         selectedContactName = name;
-        jLabel2.setText(name);
-        jLabel3.setText("Active now");
-        jLabel3.setForeground(new Color(40, 147, 59));
+        jLabel7.setText(name);
+        jLabel8.setText("Active now");
+        jLabel8.setForeground(new Color(40, 147, 59));
         chatBody.clearChat();
         loadConversation();
         jTextField1.requestFocus();
@@ -609,16 +691,26 @@ public class Chat extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnAddContact;
     private javax.swing.JButton btnLogout;
     private javax.swing.JButton btnSend;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
+    private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
+    private javax.swing.JPanel jPanel8;
+    private javax.swing.JPanel jPanel9;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JPanel menuList;
     private javax.swing.JScrollPane sp;

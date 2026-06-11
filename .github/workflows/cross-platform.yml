@@ -50,21 +50,13 @@ jobs:
         id: detectjar
         shell: pwsh
         run: |
-          $jar = Get-ChildItem -Path "target" -Filter "*.jar" |
-                 Where-Object { $_.Name -notmatch "original" } |
+          $jar = Get-ChildItem -Path "target" -Filter "ChatApp.jar" |
                  Select-Object -First 1
 
-          if (-not $jar) { throw "No JAR found!"; }
+          if (-not $jar) { throw "ChatApp.jar not found in target/"; }
 
           echo "JAR_NAME=$($jar.Name)" >> $env:GITHUB_OUTPUT
           Write-Host "Using JAR: $($jar.Name)"
-
-      - name: copy complete jre
-        shell: pwsh
-        run: |
-          $javaHome = $env:JAVA_HOME
-          Write-Host "Copying full JRE from: $javaHome"
-          Copy-Item -Path $javaHome -Destination customjre -Recurse
 
       - name: create jre embedded exe
         shell: pwsh
@@ -73,13 +65,13 @@ jobs:
             --type exe `
             --input target `
             --main-jar "${{ steps.detectjar.outputs.JAR_NAME }}" `
-            --runtime-image customjre `
             --name ${{ env.PROJECT_NAME }} `
             --app-version "${{ steps.version.outputs.VERSION_NUMERIC }}" `
             --icon "icons/app-icon.ico" `
             --win-shortcut `
             --win-menu `
             --win-dir-chooser `
+            --verbose `
             --dest dist
 
       - name: rename exe with version
@@ -139,27 +131,19 @@ jobs:
         id: detectjar
         shell: bash
         run: |
-          JAR=$(ls target/*.jar | grep -v original | head -n 1)
-          JAR_NAME=$(basename "$JAR")
-          echo "JAR_NAME=$JAR_NAME" >> $GITHUB_OUTPUT
-          echo "Using JAR: $JAR_NAME"
+          if [ ! -f target/ChatApp.jar ]; then
+            echo "Error: ChatApp.jar not found in target/"
+            ls -la target/*.jar
+            exit 1
+          fi
+          echo "JAR_NAME=ChatApp.jar" >> $GITHUB_OUTPUT
+          echo "Using JAR: ChatApp.jar"
 
       - name: install required build tools
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y fakeroot binutils
-
-      - name: create complete jre with jlink
-        shell: bash
-        run: |
-          echo "Creating full JRE with all modules"
-          jlink \
-            --add-modules ALL-MODULE-PATH \
-            --output customjre \
-            --compress=2 \
-            --no-header-files \
-            --no-man-pages
 
       - name: create jre embedded deb
         shell: bash
@@ -168,7 +152,6 @@ jobs:
             --type deb \
             --input target \
             --main-jar "${{ steps.detectjar.outputs.JAR_NAME }}" \
-            --runtime-image customjre \
             --name ${{ env.PROJECT_NAME }} \
             --app-version "${{ steps.version.outputs.VERSION_NUMERIC }}" \
             --icon "icons/app-icon.png" \
@@ -176,6 +159,7 @@ jobs:
             --linux-deb-maintainer "maintainer@example.com" \
             --linux-app-category "Office" \
             --linux-menu-group "Office" \
+            --verbose \
             --dest dist
 
       - name: rename deb with version
@@ -235,16 +219,13 @@ jobs:
         id: detectjar
         shell: bash
         run: |
-          JAR=$(ls target/*.jar | grep -v original | head -n 1)
-          JAR_NAME=$(basename "$JAR")
-          echo "JAR_NAME=$JAR_NAME" >> $GITHUB_OUTPUT
-          echo "Using JAR: $JAR_NAME"
-
-      - name: copy complete jre
-        shell: bash
-        run: |
-          echo "Copying full JRE from: $JAVA_HOME"
-          cp -r $JAVA_HOME customjre
+          if [ ! -f target/ChatApp.jar ]; then
+            echo "Error: ChatApp.jar not found in target/"
+            ls -la target/*.jar
+            exit 1
+          fi
+          echo "JAR_NAME=ChatApp.jar" >> $GITHUB_OUTPUT
+          echo "Using JAR: ChatApp.jar"
 
       - name: create jre embedded dmg
         shell: bash
@@ -253,11 +234,11 @@ jobs:
             --type dmg \
             --input target \
             --main-jar "${{ steps.detectjar.outputs.JAR_NAME }}" \
-            --runtime-image customjre \
             --name ${{ env.PROJECT_NAME }} \
             --app-version "${{ steps.version.outputs.VERSION_NUMERIC }}" \
             --icon "icons/app-icon.icns" \
             --mac-package-name ${{ env.PROJECT_NAME }} \
+            --verbose \
             --dest dist
 
       - name: rename dmg with version

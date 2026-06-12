@@ -2,6 +2,7 @@ package com.fyuxera.chatapp;
 
 import com.fyuxera.chatapp.component.Chat_Body;
 import com.fyuxera.chatapp.component.Chat_Bottom;
+import com.fyuxera.chatapp.component.Chat_Left_With_Profile;
 import com.fyuxera.chatapp.component.Chat_Title;
 import com.fyuxera.chatapp.component.Item_People;
 import com.fyuxera.chatapp.service.UserService;
@@ -60,13 +61,18 @@ public class Chat extends javax.swing.JFrame {
     private String selectedContactName = "";
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+    private final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private int editingMessageId = -1;
     private Chat_RightAdapter editingComponent;
 
     // tracks sent message components by ID for status polling
     private final Map<Integer, Chat_RightAdapter> messageMap = new ConcurrentHashMap<>();
-    private Timer statusPollTimer;
+    // tracks received message components by ID for edit/delete updates
+    private final Map<Integer, Chat_Left_With_Profile> receivedMessageMap = new ConcurrentHashMap<>();
+    private Timer realTimeTimer;
+    private volatile int maxMessageId = 0;
+    private volatile String lastPollTime = "";
 
     // safely read is_read from JSON (handles null/missing)
     private boolean getIsRead(JsonObject msg) {
@@ -445,8 +451,11 @@ public class Chat extends javax.swing.JFrame {
 
     private void selectContact(int userId, String name) {
         cancelEdit();
-        stopStatusPolling();
+        stopRealTimePolling();
         messageMap.clear();
+        receivedMessageMap.clear();
+        maxMessageId = 0;
+        lastPollTime = "";
         selectedContactId = userId;
         selectedContactName = name;
         jLabel7.setText(name);
@@ -465,35 +474,131 @@ public class Chat extends javax.swing.JFrame {
         }
     }
 
-    private void startStatusPolling() {
-        stopStatusPolling();
-        statusPollTimer = new Timer(5000, e -> {
-            if (selectedContactId == -1 || messageMap.isEmpty()) return;
+    private void startRealTimePolling() {
+        stopRealTimePolling();
+        realTimeTimer = new Timer(1500, e -> {
+            if (selectedContactId == -1) return;
             int contactId = selectedContactId;
             int myId = SessionManager.getInstance().getCurrentUser().getUserId();
+            int sinceId = maxMessageId;
+            String pollTime = lastPollTime.isEmpty()
+                    ? isoFormat.format(new java.util.Date(0))
+                    : lastPollTime;
+            lastPollTime = isoFormat.format(new java.util.Date());
+            final String pt = pollTime;
             new Thread(() -> {
                 try {
-                    JsonArray msgs = messageService.getConversation(myId, contactId);
+                    JsonObject result = messageService.getNewMessages(contactId, sinceId, pt);
+                    if (result == null || result.size() == 0) return;
+
+                    JsonArray newMsgs = result.has("messages")
+                            ? result.getAsJsonArray("messages") : new JsonArray();
+                    JsonArray updatedMsgs = result.has("updated")
+                            ? result.getAsJsonArray("updated") : new JsonArray();
+                    JsonArray deletedIds = result.has("deleted")
+                            ? result.getAsJsonArray("deleted") : new JsonArray();
+
+                    if (newMsgs.size() == 0 && updatedMsgs.size() == 0 && deletedIds.size() == 0) return;
+
+                    // capture data for EDT
+                    final JsonArray fNew = newMsgs;
+                    final JsonArray fUpd = updatedMsgs;
+                    final JsonArray fDel = deletedIds;
+                    final int fContactId = contactId;
+                    final int fMyId = myId;
+
                     SwingUtilities.invokeLater(() -> {
-                        for (int i = 0; i < msgs.size(); i++) {
-                            JsonObject m = msgs.get(i).getAsJsonObject();
-                            int id = m.get("message_id").getAsInt();
+                        // process deletions
+                        for (int i = 0; i < fDel.size(); i++) {
+                            int delId = fDel.get(i).getAsInt();
+                            Chat_RightAdapter sentComp = messageMap.remove(delId);
+                            if (sentComp != null) {
+                                Container p = sentComp.getParent();
+                                if (p != null) { p.remove(sentComp); }
+                            }
+                            Chat_Left_With_Profile recvComp = receivedMessageMap.remove(delId);
+                            if (recvComp != null) {
+                                Container p = recvComp.getParent();
+                                if (p != null) { p.remove(recvComp); }
+                            }
+                        }
+
+                        // process updates (edits + read status)
+                        for (int i = 0; i < fUpd.size(); i++) {
+                            JsonObject m = fUpd.get(i).getAsJsonObject();
+                            int msgId = m.get("message_id").getAsInt();
+                            String newText = m.get("message_content").getAsString();
                             boolean read = getIsRead(m);
-                            Chat_RightAdapter a = messageMap.get(id);
-                            if (a != null) a.setRead(read);
+
+                            Chat_RightAdapter sentComp = messageMap.get(msgId);
+                            if (sentComp != null) {
+                                sentComp.updateText(newText);
+                                sentComp.setRead(read);
+                            }
+                            Chat_Left_With_Profile recvComp = receivedMessageMap.get(msgId);
+                            if (recvComp != null) {
+                                recvComp.setText(newText);
+                            }
+                        }
+
+                        // process new messages
+                        String lastDate = "";
+                        for (int i = 0; i < fNew.size(); i++) {
+                            JsonObject m = fNew.get(i).getAsJsonObject();
+                            int msgId = m.get("message_id").getAsInt();
+                            int senderId = m.get("sender_id").getAsInt();
+                            String text = m.get("message_content").getAsString();
+                            String createdAt = m.get("created_at").getAsString();
+
+                            String msgDate = createdAt.substring(0, 10);
+                            if (!msgDate.equals(lastDate)) {
+                                chatBody.addDate(msgDate);
+                                lastDate = msgDate;
+                            }
+                            String time = createdAt.substring(11, 16);
+
+                            if (senderId == fMyId) {
+                                boolean read = getIsRead(m);
+                                Chat_RightAdapter a = messageMap.get(msgId);
+                                if (a != null) a.setRead(read);
+                            } else {
+                                Chat_Left_With_Profile left = new Chat_Left_With_Profile();
+                                left.setText(text);
+                                left.setTime(time);
+                                left.setUserProfile(selectedContactName);
+                                receivedMessageMap.put(msgId, left);
+                                chatBody.addLeftComponent(left);
+                            }
+
+                            if (msgId > maxMessageId) {
+                                maxMessageId = msgId;
+                            }
+                        }
+
+                        if (fDel.size() > 0 || fUpd.size() > 0 || fNew.size() > 0) {
+                            chatBody.repaint();
+                            chatBody.revalidate();
+                        }
+
+                        // mark incoming messages as read
+                        if (fNew.size() > 0) {
+                            new Thread(() -> {
+                                try {
+                                    messageService.markMessagesAsRead(fContactId);
+                                } catch (Exception ex) { /* non-critical */ }
+                            }).start();
                         }
                     });
                 } catch (Exception ex) {
-                    // Handle exception
                 }
             }).start();
         });
-        statusPollTimer.start();
+        realTimeTimer.start();
     }
 
-    private void stopStatusPolling() {
-        if (statusPollTimer != null && statusPollTimer.isRunning()) {
-            statusPollTimer.stop();
+    private void stopRealTimePolling() {
+        if (realTimeTimer != null && realTimeTimer.isRunning()) {
+            realTimeTimer.stop();
         }
     }
 
@@ -507,6 +612,8 @@ public class Chat extends javax.swing.JFrame {
                 SwingUtilities.invokeLater(() -> {
                     chatBody.clearChat();
                     messageMap.clear();
+                    receivedMessageMap.clear();
+                    maxMessageId = 0;
                     String lastDate = "";
                     for (int i = 0; i < messages.size(); i++) {
                         JsonObject msgJson = messages.get(i).getAsJsonObject();
@@ -529,9 +636,18 @@ public class Chat extends javax.swing.JFrame {
                             messageMap.put(messageId, right);
                             chatBody.addRightComponent(right);
                         } else {
-                            chatBody.addItemLeft(messageText, selectedContactName, time);
+                            Chat_Left_With_Profile left = new Chat_Left_With_Profile();
+                            left.setText(messageText);
+                            left.setTime(time);
+                            left.setUserProfile(selectedContactName);
+                            receivedMessageMap.put(messageId, left);
+                            chatBody.addLeftComponent(left);
+                        }
+                        if (messageId > maxMessageId) {
+                            maxMessageId = messageId;
                         }
                     }
+                    lastPollTime = isoFormat.format(new java.util.Date());
                     jTextField1.requestFocus();
 
                     // mark received messages as read
@@ -540,14 +656,13 @@ public class Chat extends javax.swing.JFrame {
                         try {
                             messageService.markMessagesAsRead(otherId);
                         } catch (Exception ex) {
-                            // silently fail - non-critical
                         }
                     }).start();
 
-                    startStatusPolling();
+                    startRealTimePolling();
                 });
             } catch (Exception e) {
-                // Handle exception
+                e.printStackTrace();
             }
         }).start();
     }
@@ -583,6 +698,10 @@ public class Chat extends javax.swing.JFrame {
 
                 SwingUtilities.invokeLater(() -> {
                     if (msgId != -1) {
+                        if (msgId > maxMessageId) {
+                            maxMessageId = msgId;
+                        }
+                        lastPollTime = isoFormat.format(new java.util.Date());
                         String time = timeFormat.format(new Date());
                         Chat_RightAdapter right = new Chat_RightAdapter(message, time, false);
                         right.setMessageId(msgId);
@@ -596,6 +715,7 @@ public class Chat extends javax.swing.JFrame {
                     }
                 });
             } catch (Exception e) {
+                e.printStackTrace();
                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
                         Chat.this, "Error: " + e.getMessage(),
                         "Send Error", JOptionPane.ERROR_MESSAGE));

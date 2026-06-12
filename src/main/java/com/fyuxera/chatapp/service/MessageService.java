@@ -44,14 +44,13 @@ public class MessageService {
         JsonObject json = new JsonObject();
         json.addProperty("recipient_id", recipientId);
         json.addProperty("message_text", messageText);
-        
         JsonObject response = apiClient.postAuth(
                 ApiConfig.ENDPOINT_MESSAGES_SEND,
                 json.toString()
         );
-        
         if (apiClient.isSuccess(response) && response.has("message_id")) {
-            return response.get("message_id").getAsInt();
+            int id = response.get("message_id").getAsInt();
+            return id;
         }
         return -1;
     }
@@ -61,16 +60,32 @@ public class MessageService {
         String endpoint = ApiConfig.ENDPOINT_MESSAGES_CONVERSATION + userId + 
                          "?limit=" + limit + "&offset=" + offset;
         JsonObject response = apiClient.getAuth(endpoint);
-        
         if (apiClient.isSuccess(response)) {
-            return response.getAsJsonArray("messages");
+            JsonArray arr = response.getAsJsonArray("messages");
+            return arr;
         }
         return new JsonArray();
     }
     
     // get conversation with a user (with default pagination)
     public JsonArray getConversation(int currentUserId, int otherUserId) throws Exception {
-        return getConversation(otherUserId, 50, 0);
+        JsonArray result = getConversation(otherUserId, 50, 0);
+        return result;
+    }
+
+    // get new messages since a given message_id (real-time sync)
+    public JsonObject getNewMessages(int userId, int sinceId, String sinceTime) throws Exception {
+        String endpoint = ApiConfig.ENDPOINT_MESSAGES_CONVERSATION + userId +
+                         "?since_id=" + sinceId + "&since_time=" + java.net.URLEncoder.encode(sinceTime, "UTF-8");
+        JsonObject response = apiClient.getAuth(endpoint);
+
+        if (apiClient.isSuccess(response)) {
+            int newCount = response.has("messages") ? response.getAsJsonArray("messages").size() : 0;
+            int updCount = response.has("updated") ? response.getAsJsonArray("updated").size() : 0;
+            int delCount = response.has("deleted") ? response.getAsJsonArray("deleted").size() : 0;
+            return response;
+        }
+        return new JsonObject();
     }
     
     // delete a message
